@@ -1,5 +1,14 @@
 using Test
 
+function prettyprint(level)
+    for row in eachrow(level)
+        for i in row
+            print(i)
+        end
+        println()
+    end
+end
+
 @testset "Map generation" begin
     inp = preparelevel("""
         ##########

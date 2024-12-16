@@ -18,10 +18,10 @@ function trymove!(level, pos, dir)
     while level[lastpos] == 'O'
         lastpos += movement
     end
-    level[lastpos] == '#' && return level, pos
+    level[lastpos] == '#' && return level, pos  # can't move
     level[pos] = '.'
-    level[lastpos] = 'O'
-    level[pos + movement] = '@'
+    level[lastpos] = 'O'  # replace with box first because if there is no boxes
+    level[pos + movement] = '@' # the box will be replaced with robot immediatelly
     return level, pos + movement
 end
 
@@ -53,15 +53,6 @@ function makenewmap(level)
     newlevel
 end
 
-function prettyprint(level)
-    for row in eachrow(level)
-        for i in row
-            print(i)
-        end
-        println()
-    end
-end
-
 @inline function resolveboxcoords(level, boxpos)
     boxpos2 = boxpos
     if level[boxpos] == '['
@@ -73,11 +64,17 @@ end
 end
 
 using DataStructures
+using IterTools: @ifsomething
 
+"""
+    gathervacentplaces!(level, pos, movement, gathered)
+Return `gathered` -- an `SortedDict` with all replacements to be done -- if 
+movement is valid, `nothing` otherwise
+"""
 function gathervacentplaces!(level, pos, movement, gathered)
     nextpos = pos + movement
+    gathered[pos] = nextpos
     if level[nextpos] == '.'
-        gathered[pos] = nextpos
         return gathered
     elseif level[nextpos] == '#'
         return nothing
@@ -86,42 +83,32 @@ function gathervacentplaces!(level, pos, movement, gathered)
     boxpos, boxpos2 = resolveboxcoords(level, nextpos)
     gathered[boxpos] = boxpos + movement
     gathered[boxpos2] = boxpos2 + movement
+
+    # left or right
     if movement == CartesianIndex(0, 1)
         return gathervacentplaces!(level, boxpos2, movement, gathered)
     elseif movement == CartesianIndex(0, -1)
         return gathervacentplaces!(level, boxpos, movement, gathered)
-    elseif movement == CartesianIndex(-1, 0) || movement == CartesianIndex(1, 0)
-        if isnothing(gathervacentplaces!(level, boxpos, movement, gathered))
-            return nothing
-        end
-        if isnothing(gathervacentplaces!(level, boxpos2, movement, gathered))
-            return nothing
-        end
-        return gathered
-    else
-        return nothing
     end
+    
+    # up or down, means we need to gather vacant positions for left and 
+    # right boxpos if any returns nothing then propagate nothing
+    @ifsomething gathervacentplaces!(level, boxpos, movement, gathered)
+    @ifsomething gathervacentplaces!(level, boxpos2, movement, gathered)
+
+    return gathered
 end
 
 function trymove2!(level, pos, dir)
     movement = movements[dir]
-    nextpos = pos + movement
-    if level[nextpos] == '#'
-        return level, pos
-    elseif level[nextpos] == '.'
-        level[pos] = '.'
-        level[nextpos] = '@'
-        return level, nextpos
-    end
-    ordering = Base.Forward
-    if dir == 'v' || dir == '>'
-        ordering = Base.Reverse
-    end
-    vacantplaces = SortedDict{CartesianIndex{2}, CartesianIndex{2}}(ordering, pos => nextpos)
+    ordering = dir == 'v' || dir == '>' ? Base.Reverse : Base.Forward
+    
+    vacantplaces = SortedDict{CartesianIndex{2}, CartesianIndex{2}}(ordering)
+    
     if isnothing(gathervacentplaces!(level, pos, movement, vacantplaces))
         return level, pos
     end
-    for (from, to) in vacantplaces
+    for (from, to) in vacantplaces  # usage of SortedDict allows this
         level[to] = level[from]
         level[from] = '.'
     end
