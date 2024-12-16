@@ -12,24 +12,13 @@ level, moves = parseinput(filename)
 
 const movements = Dict(map(=>, "^>v<", CartesianIndex.(((-1, 0), (0, 1), (1, 0), (0, -1)))))
 
-function ispossible(level, pos, movement)
-    @inbounds while true
-        pos = pos + movement
-        if level[pos] == 'O'
-            continue
-        else
-            return level[pos] == '.'
-        end
-    end
-end
-
 function trymove!(level, pos, dir)
     movement = movements[dir]
-    ispossible(level, pos, movement) || return level, pos
     lastpos = pos + movement
-    while level[lastpos] != '.'
+    while level[lastpos] == 'O'
         lastpos += movement
     end
+    level[lastpos] == '#' && return level, pos
     level[pos] = '.'
     level[lastpos] = 'O'
     level[pos + movement] = '@'
