@@ -21,24 +21,21 @@ end
 
 using DataStructures
 
-function marklevel!(level, startpos=CartesianIndex(1, 1))
-    q = Queue{CartesianIndex{2}}()
+function marklevel!(level, q=Queue{CartesianIndex{2}}(length(level)), startpos=CartesianIndex(1, 1), endpos=last(eachindex(IndexCartesian(), level)))
     level[startpos] = 0
     enqueue!(q, startpos)
     movements = CartesianIndex.(((-1, 0), (0, 1), (1, 0), (0, -1)))
-    counter = 0
     while !isempty(q)
         curr = dequeue!(q)
         for movement in movements
             next = curr + movement
             checkbounds(Bool, level, next) && level[next] - level[curr] > 1 && level[next] != -1 || continue
             level[next] = level[curr] + 1
+            next == endpos && return level
             enqueue!(q, next)
         end
-        counter > length(level) && error("STUCK!!")
-        counter += 1
     end
-    level, counter
+    level
 end
 
 function part1(places)
@@ -52,11 +49,15 @@ part1(places)
 
 function part2(places)
     level = Matrix{Int}(undef, 71, 71)
-    for i in 1025:length(places)
-        level .= typemax(Int)
-        filllevel!(level, @view places[1:i])
-        marklevel!(level)
-        level[71, 71] == typemax(Int) && return places[i] - CartesianIndex(1, 1)
+    filllevel!(level, @view places[1:1024])
+    level2 = copy(level)
+    q=Queue{CartesianIndex{2}}(length(level))
+    for i in @view places[1025:end]
+        level2[i] = -1
+        level .= level2
+        empty!(q)
+        marklevel!(level, q)
+        level[71, 71] == typemax(Int) && return i - CartesianIndex(1, 1)
     end
 end
 
