@@ -12,9 +12,12 @@ parseinput(filename) = collect(eachline(filename))
 #     | 0 | A |
 #     +---+---+
 
-function writemovement(io, delta, horizfirst)
+using Memoize
+
+@memoize function writemovement(delta, horizfirst)
     v = delta[1] > 0 ? 'v' : '^'
     h = delta[2] > 0 ? '>' : '<'
+    io = IOBuffer()
     if horizfirst
         write(io, h ^ abs(delta[2]))
         write(io, v ^ abs(delta[1]))
@@ -23,29 +26,31 @@ function writemovement(io, delta, horizfirst)
         write(io, h ^ abs(delta[2]))
     end
     write(io, 'A')
+    String(take!(io))
 end
 
 function _navigate(code; coords, startpos, forbidden)
-    seq = [IOBuffer()]
+    seq = String[]
+    sizehint!(seq, length(code))
     for c in code
         nextpos = coords[c]
         delta = nextpos - startpos
-        if startpos + CartesianIndex(delta[1], 0) == forbidden
-            writemovement.(seq, Ref(delta), true)
+        encoded = if startpos + CartesianIndex(delta[1], 0) == forbidden
+            writemovement(delta, true)
         elseif startpos + CartesianIndex(0, delta[2]) == forbidden
-            writemovement.(seq, Ref(delta), false)
+            writemovement(delta, false)
+        # "<v" is preferable over "v<"
+        # "<^" is preferable over "^<"
+        # "v>" is preferable over ">v"
+        elseif delta[2] <= 0
+            writemovement(delta, true)
         else
-            seq2 = deepcopy(seq)
-            writemovement.(seq, Ref(delta), false)
-            writemovement.(seq2, Ref(delta), true)
-            seq = [seq; seq2]
+            writemovement(delta, false)
         end
+        push!(seq, encoded)
         startpos = nextpos
     end
-    variants = String.(take!.(seq))
-    minlen, _ = findmin(length, variants)
-    filter!(var -> length(var) == minlen, variants)
-    unique!(variants)
+    seq
 end
 
 navigate1(code) = _navigate(
@@ -61,19 +66,6 @@ navigate1(code) = _navigate(
 # | < | v | > |
 # +---+---+---+
 
-function navigate3(code)
-    coords = Dict(['^', 'A', '<', 'v', '>'] .=> (CartesianIndex(i, j) for j in 1:3, i in 1:2 if i != 1 || j != 1))
-    startpos = CartesianIndex(1, 3)
-    seq = IOBuffer()
-    for c in code
-        nextpos = coords[c]
-        delta = nextpos - startpos
-        writemovement(seq, delta, delta[1] < 0)  # delta[1] < 0 means move up, hence move horizontally first
-        startpos = nextpos
-    end
-    String(take!(seq))
-end
-
 navigate2(code) = _navigate(
     code;
     coords=Dict(['^', 'A', '<', 'v', '>'] .=> (CartesianIndex(i, j) for j in 1:3, i in 1:2 if i != 1 || j != 1)),
@@ -81,27 +73,30 @@ navigate2(code) = _navigate(
     forbidden=CartesianIndex(1, 1),
 )
 
-e1 = navigate1("379A")
-e2 = mapreduce(navigate2, vcat, e1)
-navigate3(e2[1])
+
+@memoize function dfs(code, limit=0)
+    limit == 0 && return length(code)
+    sum(dfs.(navigate2(code), limit-1))
+end
 
 function part1(codes)
-    sum(codes) do code
+    sum(codes; init=0) do code
         m1 = parse(Int, replace(code, "A" => ""))
         e1 = navigate1(code)
-        e2 = mapreduce(navigate2, vcat, e1)
-        e3 = navigate3.(e2)
-        minlen, _ = findmin(length, e3)
-        m1 * minlen
+        m1 * sum(dfs.(e1, 2))
     end
 end
 
 codes = parseinput(filename)
 
-codes = split("""029A
-980A
-179A
-456A
-379A""")
-
 part1(codes)
+
+function part2(codes)
+    sum(codes; init=0) do code
+        m1 = parse(Int, replace(code, "A" => ""))
+        e1 = navigate1(code)
+        m1 * sum(dfs.(e1, 25))
+    end
+end
+
+part2(codes)
