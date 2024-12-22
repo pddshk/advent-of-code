@@ -38,11 +38,11 @@ end
 using IterTools
 
 function prices_to_seq(prices)
-    deltas = @views prices[2:end] .- prices[1:end-1]
+    deltas = @views Iterators.map(-, prices[end:-1:2], prices[end-1:-1:1])
     Dict{NTuple{4, Int}, Int}(
         Iterators.zip(
-            partition(Iterators.reverse(deltas), 4, 1),
-            Iterators.reverse(@view prices[5:end])
+            partition(deltas, 4, 1),
+            Iterators.reverse(prices)
         )
     )
 end
@@ -67,4 +67,4 @@ function part2(nums)
     findmax(d)[1]
 end
 
-@time part2(nums)
+part2(nums)
