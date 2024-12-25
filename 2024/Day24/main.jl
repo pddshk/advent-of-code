@@ -55,16 +55,10 @@ function part2(gates)
         lhs, rhs = minmax(lhs, rhs)
 
         # XOR only for combine xi, yi or produce zi
-        if op == xor && !areXY(lhs, rhs) && dst[1] != 'z'
-            push!(bad, dst)
-            continue
-        end
+        op == xor && !areXY(lhs, rhs) && dst[1] != 'z' && push!(bad, dst)
 
         # xi,yi are only combined by XOR / AND
-        if areXY(lhs, rhs) && op ∉ (&, ⊻)
-            push!(bad, dst)
-            continue
-        end
+        areXY(lhs, rhs) && op ∉ (&, ⊻) && push!(bad, dst)
 
         # Rules for zi
         if dst[1] == 'z'
