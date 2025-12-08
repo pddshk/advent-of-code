@@ -1,3 +1,5 @@
-filename = joinpath(@__DIR__, "input.txt")
+using Test
+
+const filename = joinpath(@__DIR__, "input.txt")
 
 parseinput(filename) = read(filename, String)
