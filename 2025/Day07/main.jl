@@ -4,7 +4,7 @@ const filename = joinpath(@__DIR__, "input.txt")
 
 function parseinput(filename)
     mat = stack(Vector{Char}, eachline(filename))  # do not transpose as columns work better in Julia
-    mat = mat[:, any.(!=('.'), eachcol(mat))]
+    mat = @view mat[:, any.(!=('.'), eachcol(mat))]
     mat = map(mat) do c
         if c == '.'
             0
