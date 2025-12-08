@@ -1,22 +1,33 @@
 using Combinatorics
-using LinearAlgebra
+using DataStructures
+using LinearAlgebra: norm2
 using Test
 
 const filename = joinpath(@__DIR__, "input.txt")
 
+struct Point3D
+    x::Int
+    y::Int
+    z::Int
+end
+
+Point3D(p::AbstractVector{Int}) = Point3D(p[1], p[2], p[3])
+
+Base.:-(p1::Point3D, p2::Point3D) = Point3D(p1.x - p2.x, p1.y - p2.y, p1.z - p2.z)
+LinearAlgebra.norm2(p::Point3D) = p.x^2 + p.y^2 + p.z^2
+
 function parseinput(filename)
-    stack(eachline(filename)) do line
-        parse.(Int, split(line, ","))
+    map(eachline(filename)) do line
+        Point3D(parse.(Int, split(line, ",")))
     end
 end
 
-points = parseinput(filename)
 
 function part1(points; ncouples=1000, ncircuits=3)
-    couples = collect(combinations(eachcol(points), 2))
-    partialsort!(couples, ncouples; by=(a) -> norm(a[2] - a[1]))
+    couples = collect(combinations(points, 2))
+    partialsort!(couples, ncouples; by=(a) -> norm2(a[2] - a[1]))
     couples = couples[1:ncouples]
-    sets = Set{Vector{Int}}[]
+    sets = Set{Point3D}[]
     for couple in couples
         p1, p2 = couple
         found = false
@@ -68,15 +79,15 @@ points = parseinput(IOBuffer("""
 """))
 sets = part1(points; ncouples=10, ncircuits=3)
 
-length.(ans)
-
 part1(parseinput(filename); ncouples=1000, ncircuits=3)  # 7220 too low
+points = parseinput(filename)
+@time part1(points)  # 0.05 sec
 
 function part2(points)
-    npoints = size(points, 2)
-    couples = collect(combinations(eachcol(points), 2))
-    sort!(couples; by=(a) -> norm(a[2] - a[1]))
-    sets = Set{Vector{Int}}[]
+    npoints = length(points)
+    couples = collect(combinations(points, 2))
+    sort!(couples; by=(a) -> norm2(a[2] - a[1]))
+    sets = Set{Point3D}[]
     for couple in couples
         p1, p2 = couple
         found = false
@@ -99,14 +110,11 @@ function part2(points)
             push!(sets, Set([p1, p2]))
         end
         if length(sets) == 1 && length(sets[1]) == npoints
-            return p1[1] * p2[1]
+            return p1.x * p2.x
         end
     end
-    # partialsort!(sets, ncircuits; by=length, rev=true)
-    # return sets
-    # prod(length, @view sets[1:ncircuits])
 end
 
-part2(points)
+@time part2(points)  # 0.17 sec
 
 part2(parseinput(filename))
