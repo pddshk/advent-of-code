@@ -77,44 +77,26 @@ points = parseinput(IOBuffer("""
 984,92,344
 425,690,689
 """))
-sets = part1(points; ncouples=10, ncircuits=3)
 
-part1(parseinput(filename); ncouples=1000, ncircuits=3)  # 7220 too low
+part1(points; ncouples=10, ncircuits=3)
+
 points = parseinput(filename)
-@time part1(points)  # 0.05 sec
+part1(points)
 
 function part2(points)
     npoints = length(points)
     couples = collect(combinations(points, 2))
     sort!(couples; by=(a) -> norm2(a[2] - a[1]))
-    sets = Set{Point3D}[]
+    s = DisjointSet{Point3D}()
     for couple in couples
         p1, p2 = couple
-        found = false
-        cnt = []
-        for (i, s) in enumerate(sets)
-            if p1 in s || p2 in s
-                push!(s, p1)
-                push!(s, p2)
-                found = true
-                push!(cnt, i)
-            end
-        end
-        if length(cnt) == 2
-            s1 = sets[cnt[1]]
-            s2 = sets[cnt[2]]
-            union!(s1, s2)
-            deleteat!(sets, cnt[2])
-        end
-        if !found
-            push!(sets, Set([p1, p2]))
-        end
-        if length(sets) == 1 && length(sets[1]) == npoints
+        push!(s, p1)
+        push!(s, p2)
+        union!(s, p1, p2)
+        if num_groups(s) == 1 && length(s) == npoints
             return p1.x * p2.x
         end
     end
 end
 
-@time part2(points)  # 0.17 sec
-
-part2(parseinput(filename))
+part2(points)
