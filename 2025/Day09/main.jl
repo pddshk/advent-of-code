@@ -47,7 +47,8 @@ end
 
 function part2(points)
     edgs = edges(points)
-    maximum(area, Iterators.filter(v -> isvalid(edgs, v[1], v[2]), combinations(points, 2)))
+    sort!(edgs; by=length, rev=true)
+    maximum(area, v for v in combinations(points, 2) if isvalid(edgs, v[1], v[2]))
 end
 
 @testset "Part 2" begin
