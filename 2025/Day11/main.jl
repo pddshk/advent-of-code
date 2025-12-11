@@ -1,5 +1,3 @@
-using DataStructures
-using Bijections
 using Graphs
 using Test
 
@@ -29,16 +27,20 @@ function construct_graph(V, E)
     g, enumerated
 end
 
-function count_paths(g, src, dst, enumerated, topo=topological_sort(g))
+function count_paths(g::DiGraph, src::Int, topo=topological_sort(g))
     ways = zeros(Int, nv(g))
-    ways[enumerated[src]] = 1
+    ways[src] = 1
     for v in topo, neigh in neighbors(g, v)
         ways[neigh] += ways[v]
     end
-    return ways[enumerated[dst]]
+    return ways
 end
 
-part1(g, enumerated) = count_paths(g, "you", "out", enumerated)
+function part1(g, enumerated)
+    you, out = getindex.(Ref(enumerated), ["you", "out"])
+    ways = count_paths(g, you)
+    return ways[out]
+end
 
 @testset "part 1" begin
     g, enumerated = parseinput(IOBuffer("""
@@ -61,19 +63,11 @@ part1_result = part1(g, enumerated)
 
 function part2(g, enumerated)
     topo = topological_sort(g)
-    dac = findfirst(==(enumerated["dac"]), topo)
-    fft = findfirst(==(enumerated["fft"]), topo)
-    if dac < fft
-        svr2dac = count_paths(g, "svr", "dac", enumerated, topo)
-        dac2fft = count_paths(g, "dac", "fft", enumerated, topo)
-        fft2out = count_paths(g, "fft", "out", enumerated, topo)
-        return svr2dac * dac2fft * fft2out
-    else
-        svr2fft = count_paths(g, "svr", "fft", enumerated, topo)
-        fft2dac = count_paths(g, "fft", "dac", enumerated, topo)
-        dac2out = count_paths(g, "dac", "out", enumerated, topo)
-        return svr2fft * fft2dac * dac2out
-    end
+    svr, dac, fft, out = getindex.(Ref(enumerated), split("svr dac fft out"))
+    svr2dac, svr2fft = count_paths(g, svr, topo)[[dac, fft]]
+    dac2fft, dac2out = count_paths(g, dac, topo)[[fft, out]]
+    fft2dac, fft2out = count_paths(g, fft, topo)[[dac, out]]
+    return svr2dac * dac2fft * fft2out + svr2fft * fft2dac * dac2out
 end
 
 @testset "part 2" begin
