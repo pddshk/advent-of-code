@@ -19,32 +19,29 @@ function parseinput(filename)
 end
 
 function construct_graph(V, E)
-    enumerated = Dict(v => i+2 for (i, v) in enumerate(v for v in V if v != "you" && v != "out"))
-    enumerated["you"] = 1
-    enumerated["out"] = 2
+    enumerated = Dict(v => i for (i, v) in enumerate(V))
     g = DiGraph(length(V))
     for (v, i) in enumerated
         for next in E[v]
             add_edge!(g, i, enumerated[next])
         end
     end
-    g
+    g, enumerated
 end
 
-function part1(g)
+function count_paths(g, src, dst, enumerated, topo=topological_sort(g))
     ways = zeros(Int, nv(g))
-    topo = topological_sort(g)
-    ways[1] = 1
+    ways[enumerated[src]] = 1
     for v in topo, neigh in neighbors(g, v)
         ways[neigh] += ways[v]
     end
-    return ways[2]
+    return ways[enumerated[dst]]
 end
 
-part1(g)
+part1(g, enumerated) = count_paths(g, "you", "out", enumerated)
 
 @testset "part 1" begin
-    g = parseinput(IOBuffer("""
+    g, enumerated = parseinput(IOBuffer("""
     aaa: you hhh
     you: bbb ccc
     bbb: ddd eee
@@ -55,9 +52,9 @@ part1(g)
     ggg: out
     hhh: ccc fff iii
     iii: out"""))
-    @test part1(g) == 5
+    part1(g, enumerated) == 5
 end
 
-g = parseinput(filename)
+g, enumerated = parseinput(filename)
 
-part1_result = part1(g)
+part1_result = part1(g, enumerated)
